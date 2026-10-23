@@ -1,0 +1,10 @@
+{
+  "argTypes": {
+    "a": "int",
+    "b": "int",
+    "mask": "unsigned int",
+    "sum": "int*",
+    "prod": "int*",
+    "masked": "unsigned int*"
+  }
+}

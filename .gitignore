@@ -1,0 +1,8 @@
+.idea/
+*.so
+build/
+*.dot
+*.csv
+*.log
+__pycache__/
+tests/out/

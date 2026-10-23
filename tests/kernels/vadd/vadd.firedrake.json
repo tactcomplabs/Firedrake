@@ -1,0 +1,10 @@
+{
+  "kernelCycles": "70 + 1*size",
+  "bufferSizes": { "in1": 4096, "in2": 4096, "out": 4096 },
+  "argTypes": {
+    "in1": "const unsigned int*",
+    "in2": "const unsigned int*",
+    "out": "unsigned int*",
+    "size": "int"
+  }
+}
