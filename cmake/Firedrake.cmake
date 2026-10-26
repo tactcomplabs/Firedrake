@@ -14,10 +14,13 @@
 #     for the csim backend; without them only the XRT backends are usable.
 #
 #   firedrake_add_vitis_kernel(NAME <kernel> SOURCES src... TARGET sw_emu|hw_emu|hw
-#                              PLATFORM <xpfm> [CONFIG <v++ cfg>] [CLOCK <Hz>])
-#     Builds <kernel>.<target>.xo / .xclbin (and emconfig.json for
-#     emulation) with v++ and sets <kernel>_XCLBIN / <kernel>_XO in the
-#     parent scope.
+#                              PLATFORM <xpfm> [CONFIG <v++ cfg>] [CLOCK <Hz>]
+#                              [TAG <tag>] [EXCLUDE_FROM_ALL])
+#     Builds <kernel>.<target>[.<tag>]/<kernel>.xo / .xclbin (and
+#     emconfig.json for emulation) with v++ and sets <kernel>_XCLBIN,
+#     <kernel>_XO, <kernel>_EMCONFIG_DIR and <kernel>_XCLBIN_TARGET in the
+#     parent scope.  TAG keeps several builds of one kernel and target apart;
+#     EXCLUDE_FROM_ALL keeps the build out of the default make target.
 #
 # Requires FIREDRAKE_SOURCE_DIR, FIREDRAKE_LIB_DIR, Python3 and the
 # firedrakecore target (all provided by the top-level CMakeLists.txt).
@@ -108,7 +111,7 @@ function(firedrake_element_library lib)
 endfunction()
 
 function(firedrake_add_vitis_kernel)
-  cmake_parse_arguments(F "" "NAME;TARGET;PLATFORM;CONFIG;CLOCK" "SOURCES" ${ARGN})
+  cmake_parse_arguments(F "EXCLUDE_FROM_ALL" "NAME;TARGET;PLATFORM;CONFIG;CLOCK;TAG" "SOURCES" ${ARGN})
   if(NOT F_NAME OR NOT F_SOURCES OR NOT F_TARGET OR NOT F_PLATFORM)
     message(FATAL_ERROR "firedrake_add_vitis_kernel: NAME, SOURCES, TARGET and PLATFORM are required")
   endif()
@@ -118,9 +121,17 @@ function(firedrake_add_vitis_kernel)
     set(F_CLOCK 300000000)
   endif()
 
-  set(out_dir "${CMAKE_CURRENT_BINARY_DIR}/${F_NAME}.${F_TARGET}")
+  set(build_id "${F_NAME}.${F_TARGET}")
+  set(target_name "${F_NAME}_${F_TARGET}")
+  if(F_TAG)
+    string(APPEND build_id ".${F_TAG}")
+    string(APPEND target_name "_${F_TAG}")
+  endif()
+  set(out_dir "${CMAKE_CURRENT_BINARY_DIR}/${build_id}")
   set(xo "${out_dir}/${F_NAME}.xo")
   set(xclbin "${out_dir}/${F_NAME}.xclbin")
+  # the custom commands run in out_dir, so it must exist before they start
+  file(MAKE_DIRECTORY "${out_dir}")
   set(cfg_args)
   if(F_CONFIG)
     get_filename_component(F_CONFIG "${F_CONFIG}" ABSOLUTE)
@@ -134,7 +145,6 @@ function(firedrake_add_vitis_kernel)
 
   add_custom_command(
     OUTPUT "${xo}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${out_dir}"
     COMMAND ${VPP} -c -t ${F_TARGET} --platform ${F_PLATFORM} -k ${F_NAME} --hls.clock ${F_CLOCK}:${F_NAME}
             --temp_dir "${out_dir}/_x" ${cfg_args} -o "${xo}" ${srcs}
     DEPENDS ${srcs} ${F_CONFIG}
@@ -162,11 +172,16 @@ function(firedrake_add_vitis_kernel)
       VERBATIM)
     list(APPEND outputs "${out_dir}/emconfig.json")
   endif()
-  add_custom_target(${F_NAME}_${F_TARGET}_xclbin ALL DEPENDS ${outputs})
+  set(all ALL)
+  if(F_EXCLUDE_FROM_ALL)
+    set(all)
+  endif()
+  add_custom_target(${target_name}_xclbin ${all} DEPENDS ${outputs})
 
   set(${F_NAME}_XO "${xo}" PARENT_SCOPE)
   set(${F_NAME}_XCLBIN "${xclbin}" PARENT_SCOPE)
   set(${F_NAME}_EMCONFIG_DIR "${out_dir}" PARENT_SCOPE)
+  set(${F_NAME}_XCLBIN_TARGET "${target_name}_xclbin" PARENT_SCOPE)
 endfunction()
 
 # EOF

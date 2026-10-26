@@ -137,14 +137,17 @@ void XrtBackend::setScalar( const ArgInfo& arg, const std::vector<uint8_t>& valu
     case 8: impl->run->set_arg( int( arg.index ), asScalar<uint64_t>( value ) ); break;
     default: throw BackendError( "XRT: scalar '" + arg.name + "' has unsupported size " + std::to_string( arg.size ) );
     }
-    return;
   }
-  // xrt::ip: write the register image 32 bits at a time
+  // set_arg only reaches the CU at run.start(); write the register image
+  // as well (32 bits at a time) so readReg() sees the value immediately
   for( uint32_t pos = 0; pos < arg.size; pos += 4 ) {
     uint32_t word = 0;
     if( pos < value.size() )
       std::memcpy( &word, value.data() + pos, std::min<size_t>( 4, value.size() - pos ) );
-    impl->ip->write_register( arg.offset + pos, word );
+    if( impl->ip )
+      impl->ip->write_register( arg.offset + pos, word );
+    else
+      impl->kernel->write_register( arg.offset + pos, word );
   }
 }
 

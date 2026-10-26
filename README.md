@@ -75,7 +75,34 @@ make -j && ctest -L sw_emu
 ```
 
 Each test runs `tests/sdl/firedrake_test.py` and checks the results and the
-modeled timing. The tests are labelled `csim`, `sw_emu`, `hw_emu` and `hw`.
+modeled timing. The tests are labelled `csim`, `sw_emu`, `hw_emu`, `hw` and `u50`.
+
+### Alveo U50 hardware test
+
+The `u50` tests build the vadd kernel into a U50 bitstream and run the vadd
+scenarios on the card. Requirements:
+
+* XRT, and the U50 deployment and development platform packages
+  (`xilinx_u50_gen3x16_xdma_5_202210_1` by default)
+* A card running the matching base shell (`xilinx_u50_gen3x16_xdma_base_5`)
+* A Vitis release that supports the platform (2026.1 works). Select a different `v++` with `-DVPP=/path/to/v++`.
+* `PLATFORM_REPO_PATHS=/opt/xilinx/platforms` in the environment when you run ctest, so `v++` finds the platform
+
+```
+source /opt/xilinx/xrt/setup.sh
+export PLATFORM_REPO_PATHS=/opt/xilinx/platforms
+cmake -DFIREDRAKE_U50_TEST=ON [-DFIREDRAKE_U50_PLATFORM=<platform>] ..
+make -j
+ctest -L u50 --output-on-failure
+```
+
+`make` does not build the bitstream. ctest runs it as fixtures, in this order:
+
+1. `vadd_u50_device` checks for the card with `xrt-smi examine`.
+2. `vadd_u50_xclbin` runs `v++` to build `tests/vadd.hw.u50/vadd.xclbin`. This takes about two hours, and the timeout is 4 h.
+3. `vadd_direct_u50`, `vadd_direct_runs_u50` and `vadd_links_u50` run serially on the card.
+
+The buffers are mapped to HBM by `tests/kernels/vadd/vadd.u50.cfg`.
 
 ## Retargeting to your kernel
 
@@ -202,6 +229,6 @@ Statistics: `buffer_writes`, `buffer_reads`, `bytes_written`, `bytes_read`,
   `reads_while_running`.
 * **Checkpointing.** Device state cannot be checkpointed, so the elements are
   not checkpointable.
-* **Untested XRT backend.** The XRT backend is written against the XRT 2.x
-  native API, but it has not yet been compiled or run against an XRT install
-  in this repository's CI.
+* **XRT backend coverage.** The XRT backend has been run on hardware: the
+  `u50` tests (XRT 2.19, Vitis 2026.1, an Alveo U50). The `sw_emu` and
+  `hw_emu` targets have not yet been run.
