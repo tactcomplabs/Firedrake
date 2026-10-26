@@ -9,7 +9,7 @@
 # Each test runs tests/sdl/firedrake_test.py and passes on result=PASS.
 #
 # Labels: csim (always), sw_emu / hw_emu / hw (FIREDRAKE_TARGETS with XRT
-# and FIREDRAKE_PLATFORM).
+# and FIREDRAKE_PLATFORM), u50 (FIREDRAKE_U50_TEST with XRT and a U50).
 
 # ---------------------------------------------------
 # kernels
@@ -88,6 +88,34 @@ if(FIREDRAKE_TARGETS)
     firedrake_add_test(regfile_direct_${target} ${target} TIMEOUT ${timeout}
       ARGS --scenario regfile --mode direct ${xrt_args} --xclbin ${regfile_XCLBIN} --emconfig ${regfile_EMCONFIG_DIR})
   endforeach()
+endif()
+
+# Alveo U50 hardware: build vadd into a U50 xclbin and run it on the card.
+# The bitstream build is a ctest fixture (hours), never part of make:
+#   ctest -L u50 --output-on-failure
+if(FIREDRAKE_U50_TEST)
+  if(NOT FIREDRAKE_HAVE_XRT)
+    message(FATAL_ERROR "FIREDRAKE_U50_TEST requires XRT; source /opt/xilinx/xrt/setup.sh")
+  endif()
+  firedrake_add_vitis_kernel(NAME vadd SOURCES ${KDIR}/vadd/vadd.cpp TARGET hw
+    PLATFORM ${FIREDRAKE_U50_PLATFORM} CONFIG ${KDIR}/vadd/vadd.u50.cfg TAG u50 EXCLUDE_FROM_ALL)
+
+  add_test(NAME vadd_u50_device
+           COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check-alveo.sh ${FIREDRAKE_U50_PLATFORM} u50)
+  set_tests_properties(vadd_u50_device PROPERTIES
+    FIXTURES_SETUP u50_device TIMEOUT 60 LABELS u50)
+
+  add_test(NAME vadd_u50_xclbin
+           COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${vadd_XCLBIN_TARGET})
+  set_tests_properties(vadd_u50_xclbin PROPERTIES
+    FIXTURES_SETUP u50_xclbin TIMEOUT 14400 LABELS u50)
+
+  set(u50_args --backend hw --xclbin ${vadd_XCLBIN})
+  firedrake_add_test(vadd_direct_u50      u50 TIMEOUT 300 ARGS --scenario vadd --mode direct --elements 4096 ${u50_args})
+  firedrake_add_test(vadd_direct_runs_u50 u50 TIMEOUT 300 ARGS --scenario vadd --mode direct --runs 3 --elements 1000 ${u50_args})
+  firedrake_add_test(vadd_links_u50       u50 TIMEOUT 300 ARGS --scenario vadd --mode links --elements 4096 ${u50_args})
+  set_tests_properties(vadd_direct_u50 vadd_direct_runs_u50 vadd_links_u50 PROPERTIES
+    FIXTURES_REQUIRED "u50_device;u50_xclbin" RUN_SERIAL ON)
 endif()
 
 # EOF
