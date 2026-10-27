@@ -1,4 +1,5 @@
 # Firedrake
+![Firedrake](imgs/Firedrake.jpeg)
 
 Firedrake wraps Xilinx Vitis kernels in SST components. A generator reads a
 kernel's metadata (`kernel.xml`, `.xo` or `.xclbin`) and produces an SST
