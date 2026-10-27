@@ -232,3 +232,7 @@ Statistics: `buffer_writes`, `buffer_reads`, `bytes_written`, `bytes_read`,
 * **XRT backend coverage.** The XRT backend has been run on hardware: the
   `u50` tests (XRT 2.19, Vitis 2026.1, an Alveo U50). The `sw_emu` and
   `hw_emu` targets have not yet been run.
+
+## Acknowledgements
+
+This work was supported by the U.S. Department of Energy, Office of Science, Advanced Scientific Computing Research program under project 84245 — Democratization of Co-design for Energy-Efficient Heterogeneous Computing (DeCoDe) at Pacific Northwest National Laboratory (PNNL). PNNL is a multi-program national laboratory operated for the U.S. Department of Energy (DOE) by Battelle Memorial Institute under Contract No. DE-AC05-76RL01830.
