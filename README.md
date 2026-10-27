@@ -57,6 +57,11 @@ SDL ──► controller component (yours, or FiredrakeComponent)
 * For csim: the Vitis HLS headers (`$XILINX_HLS/include`), found automatically from `XILINX_HLS` or `XILINX_VITIS`
 * For sw_emu, hw_emu or hw: XRT (`source /opt/xilinx/xrt/setup.sh`) and an Alveo platform on an x86 host. For hw you also need the card.
 
+This is currently tested on:
+* Ubuntu 24.04LTS
+* Xilinx/AMD Alveo U50
+* Vitis/Vivado 2026.1
+
 ## Build and test
 
 ```
