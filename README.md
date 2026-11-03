@@ -81,9 +81,10 @@ make -j && ctest -L sw_emu
 ```
 
 Each test runs `tests/sdl/firedrake_test.py` and checks the results and the
-modeled timing. The tests are labelled `csim`, `sw_emu`, `hw_emu`, `hw` and `u50`.
+modeled timing. The tests are labelled `csim`, `sw_emu`, `hw_emu`, `hw`, `u50`
+and `picorv32`.
 
-### Alveo U50 hardware test
+### Alveo U50 hardware tests
 
 The `u50` tests build the vadd kernel into a U50 bitstream and run the vadd
 scenarios on the card. Requirements:
@@ -109,6 +110,53 @@ ctest -L u50 --output-on-failure
 3. `vadd_direct_u50`, `vadd_direct_runs_u50` and `vadd_links_u50` run serially on the card.
 
 The buffers are mapped to HBM by `tests/kernels/vadd/vadd.u50.cfg`.
+
+### PicoRV32 RTL kernel on the U50
+
+`FIREDRAKE_U50_TEST` also builds `picorv32_kernel`, a Vitis RTL kernel that
+wraps the unmodified [PicoRV32](https://github.com/YosysHQ/picorv32) core
+(`tests/kernels/picorv32`). It shows a hand-written RTL kernel running under
+Firedrake:
+
+* `picorv32_kernel.v` is an `ap_ctrl_hs` kernel. Its `s_axi_control`
+  registers are `mem` (buffer, `0x10`), `max_cycles` (`0x18`), and the outputs
+  `cycles` (`0x20`) and `status` (`0x28`). An AXI4 master, `m_axi_gmem`,
+  maps the core's 64 KiB address space onto the `mem` buffer, in HBM bank 0.
+* `start()` releases the core from reset at address 0. The run ends when the
+  core traps (`ebreak`: `status` = 1) or after `max_cycles` cycles (`status` = 2).
+  The core is reset only after its last AXI transaction completes.
+* `kernel.xml` describes the interface. Vivado packages it into the `.xo`
+  (`package_kernel.tcl`, `package_xo -kernel_xml`), and `firedrake-gen.py`
+  reads the same file. There are no HLS sources, so the kernel runs only on
+  the XRT backends.
+* `firmware/` holds rv32im C firmware, built with the RISC-V gcc shipped with
+  Vitis. `picorv32_test.h` defines the memory map and the reference
+  computation. The firmware and the SST host (`tests/elements/PicoRV32Host.cc`)
+  both include it.
+
+The extra requirements are `vivado`, `xsim` and `riscv64-unknown-elf-gcc` (found
+under `$XILINX_VITIS/gnu/riscv/lin/bin`). `make` builds the firmware. ctest
+runs the rest as fixtures:
+
+1. `picorv32_rtl_xsim` simulates the kernel in xsim (`tb/picorv32_kernel_tb.sv`),
+   with an AXI memory model and AXI handshake checks. It runs the firmware to
+   completion, plus one run stopped by the watchdog.
+2. `picorv32_u50_xclbin` packages the `.xo` and runs `v++ -l` to build
+   `tests/picorv32_kernel.hw.u50/picorv32_kernel.xclbin`. This takes about two
+   hours, and it starts only if the xsim test passed.
+3. `picorv32_direct_u50`, `picorv32_direct_runs_u50` and `picorv32_links_u50`
+   run on the card. Each run writes the firmware and its inputs into `mem` and
+   starts the kernel, then reads back and checks the results. The
+   direct-mode tests drive the kernel through `set_max_cycles()`,
+   `get_cycles()` and `get_status()`, and also check a run that the watchdog
+   stops.
+
+```
+ctest -L picorv32 --output-on-failure
+```
+
+The model's `kernelCycles` is `1*max_cycles`, an upper bound on the run time.
+The cycle count the hardware measured is in the `cycles` register.
 
 ## Retargeting to your kernel
 
@@ -138,6 +186,10 @@ firedrake_generate_component(NAME mykernel
 firedrake_add_vitis_kernel(NAME mykernel SOURCES mykernel/mykernel.cpp
   TARGET hw_emu PLATFORM ${FIREDRAKE_PLATFORM})   # sets mykernel_XCLBIN, mykernel_EMCONFIG_DIR
 ```
+
+For an RTL kernel, pass the packaged object as `XO <kernel.xo>` instead of
+`SOURCES`. The `.xo` can be the output of a custom command, as with
+`picorv32_kernel` in `tests/CMakeLists.txt`.
 
 **Option 3: run the generator directly.**
 

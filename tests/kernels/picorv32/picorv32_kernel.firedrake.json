@@ -1,0 +1,10 @@
+{
+  "kernelCycles": "1*max_cycles",
+  "bufferSizes": { "mem": 65536 },
+  "argTypes": {
+    "mem": "unsigned int*",
+    "max_cycles": "unsigned int",
+    "cycles": "unsigned int*",
+    "status": "unsigned int*"
+  }
+}

@@ -11,7 +11,7 @@
 #   FIREDRAKE_ENABLE_XRT       build the XRT backends (AUTO: ON when XRT is found)
 #   FIREDRAKE_PLATFORM         Alveo platform (.xpfm or name) for v++ builds of the tests
 #   FIREDRAKE_TARGETS          XRT targets to build/test: any of sw_emu;hw_emu;hw
-#   FIREDRAKE_U50_TEST         build vadd for an Alveo U50 and run it on the card (OFF)
+#   FIREDRAKE_U50_TEST         build vadd and picorv32_kernel for an Alveo U50 and run them on the card (OFF)
 #   FIREDRAKE_U50_PLATFORM     U50 platform for FIREDRAKE_U50_TEST
 #   FIREDRAKE_HLS_INCLUDE      Vitis HLS include dir (default: $XILINX_HLS/include)
 #
@@ -46,7 +46,7 @@ option(FIREDRAKE_ENABLE_TESTING "Enable Firedrake tests" ON)
 set(FIREDRAKE_ENABLE_XRT "AUTO" CACHE STRING "Build the XRT backends (ON, OFF or AUTO)")
 set(FIREDRAKE_PLATFORM "" CACHE STRING "Alveo platform used to build the test xclbins")
 set(FIREDRAKE_TARGETS "" CACHE STRING "XRT targets to build and test (sw_emu;hw_emu;hw)")
-option(FIREDRAKE_U50_TEST "Build the vadd xclbin for an Alveo U50 and run it on the card (ctest -L u50)" OFF)
+option(FIREDRAKE_U50_TEST "Build the vadd and picorv32_kernel xclbins for an Alveo U50 and run them on the card (ctest -L u50)" OFF)
 set(FIREDRAKE_U50_PLATFORM "xilinx_u50_gen3x16_xdma_5_202210_1" CACHE STRING "Alveo U50 platform for the u50 tests")
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
